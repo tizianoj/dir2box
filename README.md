@@ -4,7 +4,8 @@ dir2box
 A simple python daemon for uploading a filesystem directory to dropbox. Developed in order to upload files from my home 
 surveillance ftp server (a RaspberryPi :-) ) as soon as files are uploaded.
 
-Create your own application at https://www.dropbox.com/developers/app, get an access token and save it into config.py
+Create your own application at https://www.dropbox.com/developers/app, get an access token and save it into config.py.
+App has to be able to work with Core APIs and to manage files.
 
 Then all the fies in DIR_TO_MONITOR (settings in config.py) will be watched. When a new file arrivez there, a
 subdirectory with date pattern will be created and file will be time prefixed and moved there. An identical structure

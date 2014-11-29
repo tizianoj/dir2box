@@ -10,10 +10,12 @@ import watchdog.observers
 import watchdog.events
 
 from config import *
+
 try:
     from config_local import *
 except:
     pass
+
 
 def wait_for_file_ready(file_path):
     """
@@ -46,9 +48,16 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
 
     def on_created(self, event):
         event_time = datetime.datetime.now()
-        try :
-            if not event.is_directory:
-                src_path = event.src_path
+        src_path = event.src_path
+
+        try:
+            # There is a bug in watchdog? After a subdirectory is created first time  and file is moved there, whatchdog
+            # will report the event for file in subdir even in observer is not recursive. I have to take that in account
+            # hence this tmp1 == tmp2 check
+            tmp1 = os.path.dirname(src_path)
+            tmp2 = os.path.dirname(os.path.join(DIR_TO_MONITOR.rstrip("/\\"), "dummy")) # cannot dirname on a directory
+            if (not event.is_directory) and (tmp1 == tmp2):
+
                 logging.debug("Created filename %s" % src_path)
 
                 # watchdog is cross platform, so it does not listen to Linux event of finished writing
@@ -57,17 +66,18 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
                 wait_for_file_ready(src_path)
 
                 # Organizing the structure and filenames
-                
+
                 remote_base_dir = "%s/%s" % (BASE_DIR_TO_UPLOAD, event_time.strftime("%Y-%m-%d"))
                 local_base_dir = os.path.join(os.path.dirname(src_path), event_time.strftime("%Y-%m-%d"))
                 filename = "%s_%s" % (event_time.strftime("%H_%M_%S"), os.path.basename(src_path))
-                local_path = os.path.join(local_base_dir,filename)
+                local_path = os.path.join(local_base_dir, filename)
                 remote_path = remote_base_dir + "/" + filename
 
-                # Moving thefile. It is moved outside the watched directory
+                # Moving the file. It is moved outside the watched directory.
                 if not os.path.exists(local_base_dir):
                     os.makedirs(local_base_dir)
                     logging.debug("Created %s" % local_base_dir)
+
                 shutil.move(src_path, local_path)
                 logging.debug("Moved locally %s to %s" % (src_path, local_path))
 
@@ -79,14 +89,13 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
         except Exception as e:
             logging.warning(e)
 
+
 if __name__ == "__main__":
     if ACCESS_TOKEN == "<insert your access token here>":
         print("Please configure the program editing config.py file!")
         exit(-1)
     event_handler = FileHandler2Box()
     observer = watchdog.observers.Observer()
-    # FIXME it should be not recursive, but once it uplaode D:\tmp\2014-11-29\20_32_40_510sH8glGlL._SL500_AA300_.jpg.
-    # Maybe at directory creation?
     observer.schedule(event_handler, DIR_TO_MONITOR, recursive=False)
     observer.start()
     try:
