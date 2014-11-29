@@ -11,6 +11,6 @@ and https://www.dropbox.com/developers/core/start/python
 Requirements:
 
  * (for Raspberry PI Rasbian users) sudo apt-get install python-dev python-pip
- * pip install watchdog
- * pip install dropbox
+ * sudo pip install watchdog
+ * sudo pip install dropbox
 
