@@ -4,13 +4,12 @@ __author__ = 'tizianoj'
 import os.path
 import time
 import datetime
-
 import dropbox
+import shutil
 import watchdog.observers
 import watchdog.events
 
 from config import *
-
 try:
     from config_local import *
 except:
@@ -46,6 +45,7 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
         self.dropbox_client = dropbox.client.DropboxClient(ACCESS_TOKEN)
 
     def on_created(self, event):
+        event_time = datetime.datetime.now()
         try :
             if not event.is_directory:
                 src_path = event.src_path
@@ -54,22 +54,29 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
                 # watchdog is cross platform, so it does not listen to Linux event of finished writing
                 # Trying this way to wait for the file, alternatively I could chck filesze or revert to
                 # pyinotify, Linux only library and catch event IN_CLOSE_WRITE
-
                 wait_for_file_ready(src_path)
 
-                time_now = datetime.datetime.now()
-                remote_base_dir = "%s/%s" % (BASE_DIR_TO_UPLOAD, time_now.strftime("%Y-%m-%d"))
-                remote_filename = "%s_%s" % (time_now.strftime("%H_%M_%S"), os.path.basename(src_path))
-                remote_path = remote_base_dir + "/" + remote_filename
+                # Organizing the structure and filenames
+                
+                remote_base_dir = "%s/%s" % (BASE_DIR_TO_UPLOAD, event_time.strftime("%Y-%m-%d"))
+                local_base_dir = os.path.join(os.path.dirname(src_path), event_time.strftime("%Y-%m-%d"))
+                filename = "%s_%s" % (event_time.strftime("%H_%M_%S"), os.path.basename(src_path))
+                local_path = os.path.join(local_base_dir,filename)
+                remote_path = remote_base_dir + "/" + filename
 
-                # Todo move file locally too!
+                # Moving thefile. It is moved outside the watched directory
+                if not os.path.exists(local_base_dir):
+                    os.makedirs(local_base_dir)
+                    logging.debug("Created %s" % local_base_dir)
+                shutil.move(src_path, local_path)
+                logging.debug("Moved locally %s to %s" % (src_path, local_path))
 
-                # self.dropbox_client.file_create_folder(remote_base_dir)
-                with open(src_path, 'rb') as f:
+                # Dropbox uploading
+                with open(local_path, 'rb') as f:
                     logging.debug("Updating to %s" % remote_path)
                     response = self.dropbox_client.put_file(remote_path, f)
                     logging.debug("Uploaded: %s" % response)
-        except Exception as e :
+        except Exception as e:
             logging.warning(e)
 
 if __name__ == "__main__":
@@ -78,6 +85,8 @@ if __name__ == "__main__":
         exit(-1)
     event_handler = FileHandler2Box()
     observer = watchdog.observers.Observer()
+    # FIXME it should be not recursive, but once it uplaode D:\tmp\2014-11-29\20_32_40_510sH8glGlL._SL500_AA300_.jpg.
+    # Maybe at directory creation?
     observer.schedule(event_handler, DIR_TO_MONITOR, recursive=False)
     observer.start()
     try:
