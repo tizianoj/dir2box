@@ -29,7 +29,10 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
             src_path=event.src_path
             logging.debug("Created filename %s" % src_path)
 
-            # Todo wait somehow for file finished writing!
+            # Todo wait somehow for file finished writing!.
+            # See https://groups.google.com/forum/#!topic/watchdog-python/zExJb0Y5k3w
+            # Probably best way is to check filesize increases in time, since watchdog is
+            # cross platform and event of finished writing is not supported on all the OS
 
             # See http://stackoverflow.com/questions/23894221/upload-file-to-my-dropbox-from-python-script
             time_now = datetime.datetime.now()
