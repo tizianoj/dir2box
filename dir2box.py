@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # -*- coding: UTF-8 -*-
 __author__ = 'tizianoj'
 
@@ -10,19 +12,20 @@ import shutil
 import watchdog.observers
 import watchdog.events
 
-######################## CONFIGURATION START ########################
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+# ####################### CONFIGURATION START ########################
 
 # Obtain one for your personal app from https://www.dropbox.com/developers/apps
 # App has to be able to work with Core APIs and to manage files.
-ACCESS_TOKEN="<insert your access token here>"
+ACCESS_TOKEN = "<insert your access token here>"
 
-DIR_TO_MONITOR = "/media/disk/mylocaldir"
-BASE_DIR_TO_UPLOAD = "/my_cloud_dir"
+DIR_TO_MONITOR = "/home/pi/cameras"
+BASE_DIR_TO_UPLOAD = "/Cameras"
 WAIT_UPLOAD_MAX_TIME_SECONDS = 60
 
-######################### CONFIGURATION END #########################
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s:%(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+
+# ######################## CONFIGURATION END #########################
 
 try:
     from config_local import *
@@ -56,7 +59,8 @@ def wait_for_file_ready(file_path):
 # Dropbox API's at https://www.dropbox.com/developers/core/docs/python
 class FileHandler2Box(watchdog.events.FileSystemEventHandler):
     def __init__(self):
-        super().__init__()
+        # super().__init__() # Python 3 code
+        super(watchdog.events.FileSystemEventHandler, self).__init__() # Compatible with python2 too
         self.dropbox_client = dropbox.client.DropboxClient(ACCESS_TOKEN)
 
     def on_created(self, event):
@@ -68,7 +72,7 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
             # will report the event for file in subdir even in observer is not recursive. I have to take that in account
             # hence this tmp1 == tmp2 check
             tmp1 = os.path.dirname(src_path)
-            tmp2 = os.path.dirname(os.path.join(DIR_TO_MONITOR.rstrip("/\\"), "dummy")) # cannot dirname on a directory
+            tmp2 = os.path.dirname(os.path.join(DIR_TO_MONITOR.rstrip("/\\"), "dummy"))  # cannot dirname on a directory
             if (not event.is_directory) and (tmp1 == tmp2):
 
                 logging.debug("Created filename %s" % src_path)
@@ -103,10 +107,7 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
             logging.warning(e)
 
 
-if __name__ == "__main__":
-    if ACCESS_TOKEN == "<insert your access token here>":
-        print("Please configure the program editing the configuration lines!")
-        exit(-1)
+def main():
     event_handler = FileHandler2Box()
     observer = watchdog.observers.Observer()
     observer.schedule(event_handler, DIR_TO_MONITOR, recursive=False)
@@ -117,4 +118,14 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    if ACCESS_TOKEN == "<insert your access token here>":
+        print("Please configure the program editing the configuration lines!")
+        exit(-1)
+    main()
+
 

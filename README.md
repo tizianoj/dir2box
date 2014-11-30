@@ -17,10 +17,19 @@ and uploaded to my dropbox.
 The script is meant to be as lightweight as possible, and to not write too much on the same sectors, so that a
 Raspberry Pi with SD memory can handle it without problems and heavy synchronizations.
 
+Installation
+=======
 
-Requirements:
-
+Install requirements:
  * (for Raspberry PI Rasbian users) sudo apt-get install python-dev python-pip
  * sudo pip install watchdog
  * sudo pip install dropbox
+
+copy dir2box.py everywhere and edit it. In the parameter section, change the parameters
+
+If you want to run it as a daemon, check instructions under daemon/readme.txt
+
+
+
+
 
