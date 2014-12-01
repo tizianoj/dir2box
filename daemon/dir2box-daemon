@@ -15,9 +15,7 @@ DIR=/usr/local/bin
 DAEMON=$DIR/dir2box.py
 DAEMON_NAME=dir2box
 DAEMON_ARGS=
- 
-# This next line determines what user the script runs as.
-DAEMON_USER=pi
+DAEMON_USER=root
  
 # The process ID of the script when it runs is stored here:
 PIDFILE=/var/run/$DAEMON_NAME.pid
