@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # -*- coding: UTF-8 -*-
+
 __author__ = 'tizianoj'
 
 import os.path
@@ -9,8 +10,10 @@ import datetime
 import dropbox
 import logging
 import shutil
+import getopt
 import watchdog.observers
 import watchdog.events
+import sys
 
 # ####################### CONFIGURATION START ########################
 
@@ -20,6 +23,7 @@ ACCESS_TOKEN = "<insert your access token here>"
 
 DIR_TO_MONITOR = "/home/pi/cameras"
 BASE_DIR_TO_UPLOAD = "/Cameras"
+DIR_DATE_FORMAT = "%Y-%m-%d"
 WAIT_UPLOAD_MAX_TIME_SECONDS = 60
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s:%(levelname)s - %(message)s',
@@ -84,8 +88,8 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
 
                 # Organizing the structure and filenames
 
-                remote_base_dir = "%s/%s" % (BASE_DIR_TO_UPLOAD, event_time.strftime("%Y-%m-%d"))
-                local_base_dir = os.path.join(os.path.dirname(src_path), event_time.strftime("%Y-%m-%d"))
+                remote_base_dir = "%s/%s" % (BASE_DIR_TO_UPLOAD, event_time.strftime(DIR_DATE_FORMAT))
+                local_base_dir = os.path.join(os.path.dirname(src_path), event_time.strftime(DIR_DATE_FORMAT))
                 filename = "%s_%s" % (event_time.strftime("%H_%M_%S"), os.path.basename(src_path))
                 local_path = os.path.join(local_base_dir, filename)
                 remote_path = remote_base_dir + "/" + filename
@@ -119,6 +123,29 @@ def main():
         observer.stop()
     observer.join()
 
+def is_file_to_delete(filename, days):
+    try :
+        file_date = datetime.datetime.strptime(filename, DIR_DATE_FORMAT)
+        if ( datetime.datetime.now() - file_date > datetime.timedelta(days=days) ) :
+            return True
+    except  :
+        logging.debug("Filename " + filename + " is not a date")
+    return False
+
+def delete_older_than(days) :
+    all_files=os.listdir(DIR_TO_MONITOR)
+    for f in all_files :
+        if is_file_to_delete(f, days) :
+            logging.info("Deleting %s since older than %s days" % (f, days))
+            shutil.rmtree(os.path.join(DIR_TO_MONITOR, f))
+            # TODO Remove from dropbox!
+            remote_f = "%s/%s" % (BASE_DIR_TO_UPLOAD, f)
+            dropbox_client = dropbox.client.DropboxClient(ACCESS_TOKEN)
+            dropbox_client.file_delete(remote_f)
+
+
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s - %(message)s',
@@ -126,6 +153,19 @@ if __name__ == '__main__':
     if ACCESS_TOKEN == "<insert your access token here>":
         print("Please configure the program editing the configuration lines!")
         exit(-1)
-    main()
+
+    try :
+        opts, args = getopt.getopt(sys.argv[1:],"c:") # accetta parametro -c con valore
+        for o, a in opts :
+            if o == "-c" :
+                # TODO: Message in case not integer
+                days = int(a)
+                delete_older_than(days)
+                sys.exit(0)
+        else :
+            main()
+    except getopt.GetoptError as err:
+        print(str(err))
+        sys.exit(2)
 
 
