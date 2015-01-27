@@ -20,7 +20,7 @@ Raspberry Pi with SD memory can handle it without problems and heavy synchroniza
 * New feature* It can be run as command line with -c option (follewed by the number of days to keep) to delete directory
  olther than this day limit.
 
-E.g. running dir2box.py -c 30 will purge files older than 30 days, both locally and remotely
+E.g. running dir2box.py -c 30 will purge files older than 30 days, both locally and remotely.
 
 
 Installation
@@ -35,10 +35,6 @@ copy dir2box.py everywhere and edit it. In the parameter section, change the par
 
 If you want to run it as a daemon, check instructions under daemon/readme.txt
 
-You can run it as a command line job fo cleaning: in this case usage is dir2box.py -c daystoberetained
-
-E.g. running dir2box.py -c 30 will delet files older than 30 days on both local machine and dropbox. in order to save
-space
 
 
 
