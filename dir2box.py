@@ -21,13 +21,14 @@ import sys
 # App has to be able to work with Core APIs and to manage files.
 ACCESS_TOKEN = "<insert your access token here>"
 
+
 DIR_TO_MONITOR = "/home/pi/cameras"
 BASE_DIR_TO_UPLOAD = "/Cameras"
 DIR_DATE_FORMAT = "%Y-%m-%d"
+LOG_LEVEL=logging.WARNING
 WAIT_UPLOAD_MAX_TIME_SECONDS = 60
 
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s:%(levelname)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+
 
 # ######################## CONFIGURATION END #########################
 
@@ -36,6 +37,8 @@ try:
 except:
     pass
 
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s:%(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
 
 def wait_for_file_ready(file_path):
     """
@@ -60,12 +63,12 @@ def wait_for_file_ready(file_path):
     return True
 
 
-# Dropbox API's at https://www.dropbox.com/developers/core/docs/python
+# Dropbox API's at http://dropbox-sdk-python.readthedocs.io/en/latest/
 class FileHandler2Box(watchdog.events.FileSystemEventHandler):
     def __init__(self):
         # super().__init__() # Python 3 code
         super(watchdog.events.FileSystemEventHandler, self).__init__() # Compatible with python2 too
-        self.dropbox_client = dropbox.client.DropboxClient(ACCESS_TOKEN)
+        self.dropbox_client = dropbox.Dropbox(ACCESS_TOKEN)
 
     def on_created(self, event):
         event_time = datetime.datetime.now()
@@ -104,8 +107,9 @@ class FileHandler2Box(watchdog.events.FileSystemEventHandler):
 
                 # Dropbox uploading
                 with open(local_path, 'rb') as f:
+                    content = f.read()
                     logging.debug("Updating to %s" % remote_path)
-                    response = self.dropbox_client.put_file(remote_path, f)
+                    response = self.dropbox_client.files_upload(content, remote_path, mode=dropbox.files.WriteMode('add'), autorename=True, mute=True)
                     logging.debug("Uploaded: %s" % response)
         except Exception as e:
             logging.warning(e)
@@ -134,14 +138,19 @@ def is_file_to_delete(filename, days):
 
 def delete_older_than(days) :
     all_files=os.listdir(DIR_TO_MONITOR)
+    dropbox_client = dropbox.Dropbox(ACCESS_TOKEN)
     for f in all_files :
         if is_file_to_delete(f, days) :
             logging.info("Deleting %s since older than %s days" % (f, days))
             shutil.rmtree(os.path.join(DIR_TO_MONITOR, f))
-            # TODO Remove from dropbox!
+
             remote_f = "%s/%s" % (BASE_DIR_TO_UPLOAD, f)
-            dropbox_client = dropbox.client.DropboxClient(ACCESS_TOKEN)
-            dropbox_client.file_delete(remote_f)
+            try :
+                dropbox_client.files_delete_v2(remote_f)
+            except dropbox.files.DeleteError as de :
+                logging.warning(de)
+
+
 
 
 
